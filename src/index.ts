@@ -6,8 +6,10 @@ import * as util from "util";
 
 // shim for testing when we don't have layer-arn server yet
 const layerArns = {
-  "nodejs10.x": "arn:aws:lambda:us-east-1:554407330061:layer:MainlandLayer:9",
-  "nodejs8.10": "arn:aws:lambda:us-east-1:554407330061:layer:MainlandLayer:9"
+  "nodejs10.x":
+    "arn:aws:lambda:us-east-1:554407330061:layer:MainlandTestLayer:16",
+  "nodejs8.10":
+    "arn:aws:lambda:us-east-1:554407330061:layer:MainlandTestLayer:16"
 };
 
 export default class NewRelicLambdaLayerPlugin {
@@ -169,6 +171,10 @@ export default class NewRelicLambdaLayerPlugin {
       ? environment.NEW_RELIC_ACCOUNT_ID
       : this.config.accountId;
 
+    environment.NEW_RELIC_LICENSE_KEY = environment.NEW_RELIC_LICENSE_KEY
+      ? environment.NEW_RELIC_LICENSE_KEY
+      : this.config.licenseKey;
+
     environment.NEW_RELIC_TRUSTED_ACCOUNT_KEY = environment.NEW_RELIC_TRUSTED_ACCOUNT_KEY
       ? environment.NEW_RELIC_TRUSTED_ACCOUNT_KEY
       : environment.NEW_RELIC_ACCOUNT_ID
@@ -190,14 +196,13 @@ export default class NewRelicLambdaLayerPlugin {
   private async getLayerArn(runtime: string, region: string) {
     return util
       .promisify(request)(
-        `https://${region}.nr-layers.iopipe.com/get-layers?CompatibleRuntime=${runtime}`
+        {
+          uri: `https://${region}.nr-layers.iopipe.com/get-layers?CompatibleRuntime=${runtime}`
+        },
+        (err, response) => JSON.parse(response.body)
       )
-      .then(response => {
-        const awsResp = JSON.parse(response.body);
-        return _.get(
-          awsResp,
-          "Layers[0].LatestMatchingVersion.LayerVersionArn"
-        );
+      .then(body => {
+        return _.get(body, "Layers[0].LatestMatchingVersion.LayerVersionArn");
       });
   }
 
